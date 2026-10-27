@@ -119,3 +119,15 @@ irm https://raw.githubusercontent.com/chenpeng198877/pulse-console-cn/main/insta
 ```
 
 脚本不会覆盖已有的 `devices.json`，首次安装会创建配置并替换示例 Token。它会尝试构建和启动容器，但当前尚未在所有操作系统、Docker 版本和真实手机设备上完成完整测试。Windows/macOS 的 Docker Desktop 也可能无法直接访问主机 USB 设备；当前方案主要面向无线 ADB。
+
+## 中文登录与密码
+
+- Web 登录默认密码：`123456`。
+- 登录会话有效期为 12 小时；登录后浏览器会使用 HttpOnly 会话 Cookie 访问受保护的 API。
+- **安全提醒：`123456` 仅适合首次在可信局域网内试用。请勿将端口直接暴露到公网；部署后建议修改 `devices.json` 中的 `console_password`，再重启容器。
+- 修改密码示例：将 `"console_password": "123456"` 改成自己的强密码，然后运行：
+  ```sh
+  docker compose up -d --force-recreate
+  ```
+- 已有安装的 `devices.json` 即使没有 `console_password` 字段，服务也会使用默认值 `123456`。本地 `devices.json` 不应提交到 Git。
+- 本次汉化补充了菜单、常用状态、操作按钮、弹窗提示和动态内容的翻译。原项目中仍可能存在未覆盖的英文文案；请反馈具体页面或截图，以便继续补齐。
