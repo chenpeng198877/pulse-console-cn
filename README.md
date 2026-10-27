@@ -79,3 +79,43 @@ docker compose up -d --build
 
 - 上游项目：[smw006007/pulse-console](https://github.com/smw006007/pulse-console)
 - 本分支保留上游许可证文件。请在再发布时遵守原许可证要求。
+
+
+## 跨平台一键部署
+
+本项目提供不同系统的安装入口。要求先安装并启动 Docker（Docker Compose v2）和 Git。
+
+### Linux / macOS / WSL
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/chenpeng198877/pulse-console-cn/main/install.sh -o /tmp/pulse-console-cn-install.sh && sh /tmp/pulse-console-cn-install.sh
+```
+
+也可以使用 `wget` 下载脚本。Linux 默认安装到当前用户主目录下的 `pulse-console-cn`，macOS 同样安装到当前用户主目录。
+
+### Windows 10/11（PowerShell）
+
+先安装并启动 Docker Desktop 与 Git for Windows，再在 PowerShell 中执行：
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+irm https://raw.githubusercontent.com/chenpeng198877/pulse-console-cn/main/install.ps1 | iex
+```
+
+### 自定义安装目录或端口
+
+Linux / macOS / WSL 示例：
+
+```sh
+PULSE_PORT=8788 PULSE_INSTALL_DIR="$HOME/pulse-console-cn" sh /tmp/pulse-console-cn-install.sh
+```
+
+Windows PowerShell 示例：
+
+```powershell
+$env:PULSE_PORT="8788"
+$env:PULSE_INSTALL_DIR="$HOME\pulse-console-cn"
+irm https://raw.githubusercontent.com/chenpeng198877/pulse-console-cn/main/install.ps1 | iex
+```
+
+脚本不会覆盖已有的 `devices.json`，首次安装会创建配置并替换示例 Token。它会尝试构建和启动容器，但当前尚未在所有操作系统、Docker 版本和真实手机设备上完成完整测试。Windows/macOS 的 Docker Desktop 也可能无法直接访问主机 USB 设备；当前方案主要面向无线 ADB。
