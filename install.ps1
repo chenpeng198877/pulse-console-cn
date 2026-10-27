@@ -43,7 +43,8 @@ if ($Config.Contains("CHANGE-ME-TO-A-LONG-RANDOM-SECRET")) {
   $Token = ([System.BitConverter]::ToString($Bytes)).Replace("-", "").ToLowerInvariant()
   $Rng.Dispose()
   $Config = $Config.Replace("CHANGE-ME-TO-A-LONG-RANDOM-SECRET", $Token)
-  Set-Content -Path "devices.json" -Value $Config -Encoding UTF8
+  $Utf8NoBom = New-Object System.Text.UTF8Encoding -ArgumentList $false
+  [System.IO.File]::WriteAllText((Join-Path (Get-Location) "devices.json"), $Config, $Utf8NoBom)
 }
 
 $env:PULSE_PORT = "$Port"
