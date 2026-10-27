@@ -2639,6 +2639,12 @@ def _ws_scrcpy_boot_check():
     spawns it, inside this unit's cgroup, which is the whole reason it dies with us.
     """
     time.sleep(75)
+    # This console may run inside Docker or on macOS/Linux without systemd.
+    # In those environments ws-scrcpy is not managed by systemctl; skip this
+    # optional healing check instead of logging a misleading startup error.
+    if not shutil.which("systemctl"):
+        print("[heal] ws-scrcpy boot check skipped (systemctl is not installed; non-systemd environment)")
+        return
     try:
         def age_of_pid(pid):
             if not pid:
