@@ -38,7 +38,7 @@ openssl rand -hex 32
 
 ```sh
 mkdir -p data/apk-cache data/guardian-apks
-touch data/fleet.db data/device_state.json data/discovery_baseline.json data/screensaver.json data/heartbeat_checks.json
+touch data/metrics.db data/device_state.json data/discovery_baseline.json data/screensaver.json data/heartbeat_checks.json
 docker compose up -d --build
 docker compose logs -f
 ```
