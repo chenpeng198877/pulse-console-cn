@@ -1,0 +1,20 @@
+services:
+  pulse-console-cn:
+    build: .
+    container_name: pulse-console-cn
+    restart: unless-stopped
+    ports:
+      - "${PULSE_PORT:-8787}:8787"
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./devices.json:/app/devices.json
+      - ./data/apk-cache:/app/apk-cache
+      - ./data/guardian-apks:/app/guardian-apks
+      - ./data/fleet.db:/app/fleet.db
+      - ./data/device_state.json:/app/device_state.json
+      - ./data/discovery_baseline.json:/app/discovery_baseline.json
+      - ./data/screensaver.json:/app/screensaver.json
+      - ./data/heartbeat_checks.json:/app/heartbeat_checks.json
+    # Wireless ADB requires network reachability to phones. USB passthrough is not configured here.
