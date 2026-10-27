@@ -3606,6 +3606,17 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         body = self._read_json()
 
+        if path == "/api/logout":
+            cookie = self.headers.get("Cookie", "")
+            for part in cookie.split(";"):
+                key, sep, value = part.strip().partition("=")
+                if sep and key == "pulse_session":
+                    with CONSOLE_SESSIONS_LOCK:
+                        CONSOLE_SESSIONS.pop(value, None)
+                    break
+            return self._send(200, json.dumps({"ok": True}),
+                              headers={"Set-Cookie": "pulse_session=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict"})
+
         if path == "/api/login":
             supplied = str(body.get("password") or "")
             expected = str(CFG.get("console_password") or "123456")
