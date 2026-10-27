@@ -388,6 +388,10 @@
         });
         const result = await response.json();
         if (!response.ok || !result.ok) throw new Error(response.status === 401 ? "密码错误，请重试。" : "登录服务不可用，请检查服务器日志。");
+        // Verify that the browser accepted the session cookie before reloading the app.
+        // Otherwise the page can loop between the login gate and unauthenticated API calls.
+        const sessionResponse = await fetch("/api/session", { cache: "no-store", credentials: "same-origin" });
+        if (!sessionResponse.ok) throw new Error("登录已提交，但会话未建立。请检查浏览器是否允许本站 Cookie，然后重试。");
         document.body.classList.add("console-authenticated");
         location.reload();
       } catch (e) {
