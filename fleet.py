@@ -75,6 +75,7 @@ DEFAULT_CONFIG = {
     "bind": "127.0.0.1",            # 0.0.0.0 to expose on LAN (then SET a token!)
     "port": 8787,
     "token": "",                    # optional shared secret required for reboot actions
+    "console_password": "123456",    # web login password; change this before exposing beyond a trusted LAN
     "poll_seconds": 6,              # how often to refresh adb state + reconnect
     "thermal_poll_seconds": 45,     # how often to probe device metrics over adb (read-only)
     "wedge_poll_seconds": 300,     # how often to check for a wedged processor (read-only dumpsys)
@@ -3460,25 +3461,49 @@ def snapshot():
     }
 
 
+CONSOLE_SESSIONS = {}
+CONSOLE_SESSIONS_LOCK = threading.Lock()
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):  # quiet
         pass
 
-    def _send(self, code, body, ctype="application/json"):
+    def _send(self, code, body, ctype="application/json", headers=None):
         data = body.encode("utf-8") if isinstance(body, str) else body
         self.send_response(code)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(data)))
         # no-store so browsers always fetch the latest UI (the split .css/.js have no cache-busting)
         self.send_header("Cache-Control", "no-store, must-revalidate")
+        for name, value in (headers or {}).items():
+            self.send_header(name, value)
         self.end_headers()
         self.wfile.write(data)
 
+    def _session_ok(self):
+        cookie = self.headers.get("Cookie", "")
+        session = ""
+        for part in cookie.split(";"):
+            key, sep, value = part.strip().partition("=")
+            if sep and key == "pulse_session":
+                session = value
+                break
+        if not session:
+            return False
+        now = time.time()
+        with CONSOLE_SESSIONS_LOCK:
+            expiry = CONSOLE_SESSIONS.get(session, 0)
+            if expiry <= now:
+                CONSOLE_SESSIONS.pop(session, None)
+                return False
+        return True
+
     def _auth_ok(self):
-        need = CFG.get("token", "")
-        if not need:
+        if self._session_ok():
             return True
-        return self.headers.get("X-Fleet-Token", "") == need
+        need = CFG.get("token", "")
+        return bool(need) and hmac.compare_digest(self.headers.get("X-Fleet-Token", ""), str(need))
 
     def _read_json(self):
         n = int(self.headers.get("Content-Length", 0) or 0)
@@ -3491,6 +3516,12 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = urlparse(self.path).path
+        if path == "/api/session":
+            if not self._session_ok():
+                return self._send(401, json.dumps({"ok": False}))
+            return self._send(200, json.dumps({"ok": True}))
+        if path.startswith("/api/") and not self._auth_ok():
+            return self._send(401, json.dumps({"error": "login required"}))
         if path in ("/", "/index.html"):
             with open(os.path.join(HERE, "static", "index.html"), "rb") as f:
                 self._send(200, f.read(), "text/html; charset=utf-8")
@@ -3564,6 +3595,17 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         path = urlparse(self.path).path
         body = self._read_json()
+
+        if path == "/api/login":
+            supplied = str(body.get("password") or "")
+            expected = str(CFG.get("console_password") or "123456")
+            if not hmac.compare_digest(supplied, expected):
+                return self._send(401, json.dumps({"ok": False, "message": "密码错误"}))
+            session = secrets.token_urlsafe(32)
+            with CONSOLE_SESSIONS_LOCK:
+                CONSOLE_SESSIONS[session] = time.time() + 43200
+            cookie = f"pulse_session={session}; Path=/; Max-Age=43200; HttpOnly; SameSite=Strict"
+            return self._send(200, json.dumps({"ok": True}), headers={"Set-Cookie": cookie})
 
         # Telemetry ingest is unauthenticated (devices push here); it only stores informational health.
         if path == "/api/telemetry":
