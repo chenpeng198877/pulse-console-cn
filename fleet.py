@@ -3529,7 +3529,11 @@ class Handler(BaseHTTPRequestHandler):
         if path.startswith("/api/") and not self._auth_ok():
             return self._send(401, json.dumps({"error": "login required"}))
         if path in ("/", "/index.html"):
-            with open(os.path.join(HERE, "static", "index.html"), "rb") as f:
+            # Serve a standalone login page until the browser has a valid session.
+            # This avoids injecting a login overlay into the application DOM and prevents
+            # the UI from issuing its initial API poll before authentication is complete.
+            page = "index.html" if self._session_ok() else "login.html"
+            with open(os.path.join(HERE, "static", page), "rb") as f:
                 self._send(200, f.read(), "text/html; charset=utf-8")
         elif path == "/api/state":
             self._send(200, json.dumps(snapshot()))
