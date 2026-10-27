@@ -12,7 +12,7 @@ services:
       - ./devices.json:/app/devices.json
       - ./data/apk-cache:/app/apk-cache
       - ./data/guardian-apks:/app/guardian-apks
-      - ./data/fleet.db:/app/fleet.db
+      - ./data/metrics.db:/app/metrics.db
       - ./data/device_state.json:/app/device_state.json
       - ./data/discovery_baseline.json:/app/discovery_baseline.json
       - ./data/screensaver.json:/app/screensaver.json
