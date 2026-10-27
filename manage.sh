@@ -72,7 +72,7 @@ status(){
   printf '\n访问地址：http://127.0.0.1:$PORT\n'
 }
 logs(){ check_docker || return 1; is_project || { yellow "尚未安装：$APP_DIR"; return 1; }; cd "$APP_DIR"; echo "实时日志；按 Ctrl+C 返回菜单"; docker compose logs -f --tail=100; }
-service_action(){ check_docker || return 1; is_project || { yellow "尚未安装：$APP_DIR"; return 1; }; cd "$APP_DIR"; docker compose "$1"; }
+service_action(){ check_docker || return 1; is_project || { yellow "尚未安装：$APP_DIR"; return 1; }; cd "$APP_DIR"; docker compose "$@"; }
 uninstall(){
   check_docker || return 1; is_project || { yellow "尚未安装：$APP_DIR"; return 1; }
   confirm "停止并卸载服务（保留配置和数据）？" || return 0
