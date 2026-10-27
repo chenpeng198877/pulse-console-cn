@@ -2639,6 +2639,12 @@ def _ws_scrcpy_boot_check():
     spawns it, inside this unit's cgroup, which is the whole reason it dies with us.
     """
     time.sleep(75)
+    # This console may run inside Docker or on macOS/Linux without systemd.
+    # In those environments ws-scrcpy is not managed by systemctl; skip this
+    # optional healing check instead of logging a misleading startup error.
+    if not shutil.which("systemctl"):
+        print("[heal] ws-scrcpy boot check skipped (systemctl is not installed; non-systemd environment)")
+        return
     try:
         def age_of_pid(pid):
             if not pid:
@@ -3523,7 +3529,11 @@ class Handler(BaseHTTPRequestHandler):
         if path.startswith("/api/") and not self._auth_ok():
             return self._send(401, json.dumps({"error": "login required"}))
         if path in ("/", "/index.html"):
-            with open(os.path.join(HERE, "static", "index.html"), "rb") as f:
+            # Serve a standalone login page until the browser has a valid session.
+            # This avoids injecting a login overlay into the application DOM and prevents
+            # the UI from issuing its initial API poll before authentication is complete.
+            page = "index.html" if self._session_ok() else "login.html"
+            with open(os.path.join(HERE, "static", page), "rb") as f:
                 self._send(200, f.read(), "text/html; charset=utf-8")
         elif path == "/api/state":
             self._send(200, json.dumps(snapshot()))
@@ -3595,6 +3605,17 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         path = urlparse(self.path).path
         body = self._read_json()
+
+        if path == "/api/logout":
+            cookie = self.headers.get("Cookie", "")
+            for part in cookie.split(";"):
+                key, sep, value = part.strip().partition("=")
+                if sep and key == "pulse_session":
+                    with CONSOLE_SESSIONS_LOCK:
+                        CONSOLE_SESSIONS.pop(value, None)
+                    break
+            return self._send(200, json.dumps({"ok": True}),
+                              headers={"Set-Cookie": "pulse_session=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict"})
 
         if path == "/api/login":
             supplied = str(body.get("password") or "")
